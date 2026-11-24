@@ -1,0 +1,50 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The history guard below needs every commit of the pull request.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Keep game-derived files out
+        run: python -B tools/lint_repo.py
+
+      # Every file version each commit of the PR added or modified, so a file added and deleted again inside the PR
+      # (still in its history) is rejected too.
+      - name: Guard every commit of the pull request
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python -B tools/lint_repo.py --history "$BASE_SHA...$HEAD_SHA"
+
+      - name: Byte-compile all Python files
+        shell: bash
+        run: git ls-files -z '*.py' | xargs -0 --no-run-if-empty python -m py_compile
+
+  tests:
+    # The repack tests compile shaders with d3dcompiler_47.dll, which only Windows has.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Unit tests
+        run: python -B -m unittest discover -s tests -v

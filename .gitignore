@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+/out/
+/tmp/
+# Shader tool output belongs on your own machine (see CONTRIBUTING.md)
+*.sgo
+*.SGO
+*.dxbc
+*.cso
+*.shdr
+*.cpk
